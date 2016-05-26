@@ -1,23 +1,13 @@
-# -*- encoding: utf-8 -*-
-"""
-RAMSIS interface to openquake
-
-This module replicates minor parts of openquakes engine.py
-
-Copyright (C) 2013, ETH Zurich - Swiss Seismological Service SED
-
-"""
+from subprocess import Popen, PIPE
 import os
 import sys
+import re
 import logging
 import tempfile
 import shutil
 import utils
 
-from multiprocessing import Process, Queue
 from PyQt4 import QtCore
-
-from process import run_job
 
 # Debug settings
 RAMSIS_LOG_LEVEL = logging.DEBUG
@@ -40,67 +30,59 @@ _RISK_POE_RESOURCES = {
 
 
 class _OqRunner(QtCore.QObject):
-    """
-    Runs OQ jobs on a separate process
-
-    Before running a new job the relevant inputs must be set on the class
-    member vars. At the moment only one job can run at the time.
-    The singleton OqRunner object itself lives on a secondary thread where
-    it listens to messages from the OQ process and forwards them to the main
-    thread via signals.
-
-    :ivar job_input: dict with input parameters for the next job of the form
-        job_input = {
-            'job_def': '/path/to/job/file'
-            'hazard_calculation_id': None,
-            'hazard_output_id': None,
-            'oq_log_file': None,
-            'oq_exports': (),
-            'oq_log_level': 'progress'
-        }
-        Only job_def is mandatory, all other parameters take the default values
-        that are shown above when omitted.
-
-    """
-
     job_complete = QtCore.pyqtSignal(object)
 
     def __init__(self):
         super(_OqRunner, self).__init__()
         # input
         self.job_input = None
-        # other stuff
-        self.busy = False
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(RAMSIS_LOG_LEVEL)
 
     def run(self):
         assert self.job_input is not None, 'No job input provided'
-        queue = Queue()
-        p = Process(target=run_job, args=(queue, self.job_input))
-        p.start()
-        finished = False
-        while not finished:
-            print('Waiting for msg on {} thread.'
-                  .format(QtCore.QThread.currentThread().objectName()))
-            msg = queue.get()
-            if isinstance(msg, str):
-                self._logger.info('OQ Process: ' + msg)
-            else:
-                finished = True
-                self.job_input = None
-                self.job_complete.emit(msg)
+
+        job_type = self.job_input["job_type"]
+        if job_type == "hazard":
+            args = [
+                "oq-engine",
+                "--run-hazard",
+                self.job_input["job_def"]
+            ]
+        elif job_type == "risk":
+            args = [
+                "oq-engine",
+                "--run-risk",
+                self.job_input["job_def"],
+                "--hazard-calculation-id",
+                str(self.job_input["hazard_calculation_id"])
+            ]
+        else:
+            raise RuntimeError("No valid job type provided")
+
+        proc = Popen(args, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate()
+        exitcode = proc.returncode
+        job_id = self._process_oq_output(out, err, exitcode)
+        self.job_complete.emit(job_id)
+
+    def _process_oq_output(self, out, err, exitcode):
+        error_message = 'Could not retrieve results from OpenQuake'
+
+        if exitcode != 0:
+            raise RuntimeError(error_message)
+
+        pattern = 'Calculation ([0-9]+) completed in [0-9]+ seconds. Results:'
+        m = re.search(pattern, out)
+        if not m:
+            raise RuntimeError(error_message)
+
+        job_id = int(m.group(1))
+        return job_id
 
 
 class _OqController(QtCore.QObject):
     def __init__(self):
         super(_OqController, self).__init__()
-        # Setup the OQ listener thread and move the OQ runner object to it
-        self._oq_thread = QtCore.QThread()
-        self._oq_thread.setObjectName('OQ')
         self._oq_runner = _OqRunner()
-        self._oq_runner.moveToThread(self._oq_thread)
-        self._oq_thread.started.connect(self._oq_runner.run)
         self._oq_runner.job_complete.connect(self._job_complete)
 
         # internal vars
@@ -140,12 +122,15 @@ class _OqController(QtCore.QObject):
                                       _HAZ_RESOURCES['source_lt'])
         utils.inject_src_params(source_params, source_lt_path)
         # run job
-        job_input = {'job_def': os.path.join(self.job_dir,
-                                             _HAZ_RESOURCES['job_def'])}
+        job_def = os.path.join(self.job_dir, _HAZ_RESOURCES['job_def'])
+        job_input = {
+            'job_def': job_def,
+            'job_type': 'hazard'
+        }
         self._oq_runner.job_input = job_input
         self.callback = callback
         self.busy = True
-        self._oq_thread.start()
+        self._oq_runner.run()
 
     def run_risk_poe(self, psha_job_id, callback):
         """
@@ -170,24 +155,23 @@ class _OqController(QtCore.QObject):
             shutil.copy(os.path.join(_OQ_RESOURCE_PATH, 'risk_poe', f),
                         self.job_dir)
         # run job
-        job_input = {'job_def': os.path.join(self.job_dir,
-                                             _RISK_POE_RESOURCES['job_def']),
-                     'hazard_calculation_id': psha_job_id}
+        job_input = {
+            'job_def': os.path.join(self.job_dir,
+                                    _RISK_POE_RESOURCES['job_def']),
+            'job_type': 'risk',
+            'hazard_calculation_id': psha_job_id
+        }
         self._oq_runner.job_input = job_input
         self.callback = callback
         self.busy = True
-        self._oq_thread.start()
+        self._oq_runner.run()
 
-    def _job_complete(self, result):
+    def _job_complete(self, job_id):
         self.busy = False
-        self._logger.debug('Job #{} {}. Calling back.'
-                           .format(
-                               result['job_id'],
-                               'succeeded' if result['success'] else 'failed'))
-        if not KEEP_INPUTS:
-            shutil.rmtree(self.job_dir)
-        self._oq_thread.quit()
-        self._oq_thread.wait()
+        result = {
+            'job_id': job_id,
+            'success': True
+        }
         self.callback(result)
 
 
