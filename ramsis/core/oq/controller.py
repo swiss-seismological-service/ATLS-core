@@ -1,3 +1,10 @@
+# -*- encoding: utf-8 -*-
+"""
+RAMSIS interface to openquake
+
+Copyright (C) 2013, ETH Zurich - Swiss Seismological Service SED
+
+"""
 from subprocess import Popen, PIPE
 import os
 import sys
@@ -30,6 +37,25 @@ _RISK_POE_RESOURCES = {
 
 
 class _OqRunner(QtCore.QObject):
+    """
+     Runs OQ jobs on a separate process
+
+     Before running a new job the relevant inputs must be set on the class
+     member vars. At the moment only one job can run at the time.
+     The singleton OqRunner object itself lives on a secondary thread where
+     it waits for the OQ process to complete, then processes the results
+     from STDOUT and returns them to the main thread.
+
+     :ivar job_input: dict with input parameters for the next job of the form
+         job_input = {
+             'job_def': '/path/to/job/file',
+             'job_type': 'hazard or risk',
+             'hazard_calculation_id': None
+         }
+         job_def and job_type are mandatory, hazard_calculation_id is only
+         required when running risk calculations.
+
+     """
     job_complete = QtCore.pyqtSignal(object)
 
     def __init__(self):
