@@ -82,7 +82,12 @@ class _OqRunner(QtCore.QObject):
 class _OqController(QtCore.QObject):
     def __init__(self):
         super(_OqController, self).__init__()
+        # Setup the OQ listener thread and move the OQ runner object to it
+        self._oq_thread = QtCore.QThread()
+        self._oq_thread.setObjectName('OQ')
         self._oq_runner = _OqRunner()
+        self._oq_runner.moveToThread(self._oq_thread)
+        self._oq_thread.started.connect(self._oq_runner.run)
         self._oq_runner.job_complete.connect(self._job_complete)
 
         # internal vars
@@ -130,7 +135,7 @@ class _OqController(QtCore.QObject):
         self._oq_runner.job_input = job_input
         self.callback = callback
         self.busy = True
-        self._oq_runner.run()
+        self._oq_thread.start()
 
     def run_risk_poe(self, psha_job_id, callback):
         """
@@ -164,7 +169,7 @@ class _OqController(QtCore.QObject):
         self._oq_runner.job_input = job_input
         self.callback = callback
         self.busy = True
-        self._oq_runner.run()
+        self._oq_thread.start()
 
     def _job_complete(self, job_id):
         self.busy = False
@@ -172,6 +177,8 @@ class _OqController(QtCore.QObject):
             'job_id': job_id,
             'success': True
         }
+        self._oq_thread.quit()
+        self._oq_thread.wait()
         self.callback(result)
 
 
