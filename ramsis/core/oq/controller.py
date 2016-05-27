@@ -177,6 +177,8 @@ class _OqController(QtCore.QObject):
 
     def _job_complete(self, result):
         self.busy = False
+        if not KEEP_INPUTS:
+            shutil.rmtree(self.job_dir)
         self._oq_thread.quit()
         self._oq_thread.wait()
         self.callback(result)
