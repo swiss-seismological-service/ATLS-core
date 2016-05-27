@@ -61,22 +61,26 @@ class _OqRunner(QtCore.QObject):
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate()
         exitcode = proc.returncode
-        job_id = self._process_oq_output(out, err, exitcode)
-        self.job_complete.emit(job_id)
+        result = self._process_oq_output(out, err, exitcode)
+        self.job_complete.emit(result)
 
     def _process_oq_output(self, out, err, exitcode):
-        error_message = 'Could not retrieve results from OpenQuake'
+        success = True
 
         if exitcode != 0:
-            raise RuntimeError(error_message)
+            success = False
 
         pattern = 'Calculation ([0-9]+) completed in [0-9]+ seconds. Results:'
         m = re.search(pattern, out)
         if not m:
-            raise RuntimeError(error_message)
+            success = False
 
-        job_id = int(m.group(1))
-        return job_id
+        result = {
+            "job_id": int(m.group(1)) if success else None,
+            "success": success
+        }
+
+        return result
 
 
 class _OqController(QtCore.QObject):
@@ -171,12 +175,8 @@ class _OqController(QtCore.QObject):
         self.busy = True
         self._oq_thread.start()
 
-    def _job_complete(self, job_id):
+    def _job_complete(self, result):
         self.busy = False
-        result = {
-            'job_id': job_id,
-            'success': True
-        }
         self._oq_thread.quit()
         self._oq_thread.wait()
         self.callback(result)
