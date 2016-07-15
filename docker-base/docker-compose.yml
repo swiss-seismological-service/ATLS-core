@@ -1,0 +1,10 @@
+version: 2
+services:
+  ramsis:
+    build: .
+    volumes:
+      - ../ramsis:/ramsis
+    depends_on:
+      - rabbitmq
+  rabbitmq:
+    image: rabbitmq
