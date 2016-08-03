@@ -34,9 +34,35 @@ class Project(QtCore.QObject, OrmBase):
     __metaclass__ = DeclarativeQObjectMeta
 
     # region ORM Declarations
+
     __tablename__ = 'projects'
     id = Column(Integer, primary_key=True)
     title = Column(String)
+
+    # Project-specific settings
+
+    # Base url for the FDSNWS service
+    fdsnws_url = Column(String)
+    # Fetch interval [minutes]
+    fdsnws_interval = Column(Integer)
+    # Amount of data [minutes] to fetch
+    fdsnws_length = Column(Integer)
+    # Base url for the HYDWS service
+    hydws_url = Column(String)
+    # Fetch interval [minutes]
+    hydws_interval = Column(Integer)
+    # Amount of data [minutes] to fetch
+    hydws_length = Column(Integer)
+    # Rj server URLs
+    rj_url = Column(String)
+    rj_database_url = Column(String)
+    # ETAS server URLs
+    etas_url = Column(String)
+    etas_database_url = Column(String)
+    # Shapiro server URLs
+    shapiro_url = Column(String)
+    shapiro_database_url = Column(String)
+
     args = {'uselist': False,  # we use one to one relationships for now
             'back_populates': 'project',
             'cascade': 'all, delete-orphan'}
@@ -45,6 +71,7 @@ class Project(QtCore.QObject, OrmBase):
     forecast_set = relationship('ForecastSet', **args)
     seismic_catalog = relationship('SeismicCatalog',
                                    **dict(args, cascade='all'))
+
     # endregion
 
     # Signals
@@ -145,3 +172,31 @@ class Project(QtCore.QObject, OrmBase):
     def update_project_time(self, t):
         self._project_time = t
         self.project_time_changed.emit(t)
+
+    # Settings
+
+    def set_default_settings(self, settings):
+        self.fdsnws_url =\
+            settings.value("data_acquisition/fdsnws_url")
+        self.fdsnws_interval =\
+            settings.value("data_acquisition/fdsnws_interval")
+        self.fdsnws_length =\
+            settings.value("data_acquisition/fdsnws_length")
+        self.hydws_url =\
+            settings.value("data_acquisition/hydws_url")
+        self.hydws_interval =\
+            settings.value("data_acquisition/hydws_interval")
+        self.hydws_length =\
+            settings.value("data_acquisition/hydws_length")
+        self.rj_url =\
+            settings.value("worker/rj_url")
+        self.rj_database_url =\
+            settings.value("worker/rj_database_url")
+        self.etas_url =\
+            settings.value("worker/etas_url")
+        self.etas_database_url =\
+            settings.value("worker/etas_database_url")
+        self.shapiro_url =\
+            settings.value("worker/shapiro_url")
+        self.shapiro_database_url =\
+            settings.value("worker/shapiro_database_url")

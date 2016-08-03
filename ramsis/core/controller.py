@@ -120,6 +120,12 @@ class Controller(QtCore.QObject):
         store_path = 'sqlite:///' + path
         self._logger.info('Creating project at ' + path)
         store = Store(store_path, OrmBase)
+
+        # Set default project-specific settings
+        project = Project(store)
+        project.set_default_settings(self._settings)
+        store.add([project])
+
         store.commit()
         store.close()
         self.open_project(path)
