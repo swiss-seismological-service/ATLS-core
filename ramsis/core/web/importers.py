@@ -22,10 +22,11 @@ class FDSNWSImporter(QtCore.QObject):
 
     finished = QtCore.pyqtSignal(object)
 
-    def __init__(self, settings):
+    def __init__(self, settings, project_settings):
         QtCore.QObject.__init__(self)
 
         self._settings = settings
+        self._project_settings = project_settings
         self.fdsnws_previous_end_time = None
         self._logger = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ class FDSNWSImporter(QtCore.QObject):
     def _run(self):
         if not self._settings.value('data_acquisition/fdsnws_enabled'):
             return
-        minutes = self._settings.value('data_acquisition/fdsnws_length')
-        url = self._settings.value('data_acquisition/fdsnws_url')
+        minutes = self._project_settings.fdsnws_length
+        url = self._project_settings.fdsnws_url
         now = datetime.now()
         if self.fdsnws_previous_end_time:
             starttime = self.fdsnws_previous_end_time
@@ -73,10 +74,11 @@ class HYDWSImporter(QtCore.QObject):
 
     finished = QtCore.pyqtSignal(object)
 
-    def __init__(self, settings):
+    def __init__(self, settings, project_settings):
         QtCore.QObject.__init__(self)
 
         self._settings = settings
+        self._project_settings = project_settings
         self.hydws_previous_end_time = None
         self._logger = logging.getLogger(__name__)
 
@@ -87,8 +89,8 @@ class HYDWSImporter(QtCore.QObject):
     def _run(self):
         if not self._settings.value('data_acquisition/hydws_enabled'):
             return
-        minutes = self._settings.value('data_acquisition/hydws_length')
-        url = self._settings.value('data_acquisition/hydws_url')
+        minutes = self._project_settings.hydws_length
+        url = self._project_settings.hydws_url
         now = datetime.now()
         if self.hydws_previous_end_time:
             starttime = self.hydws_previous_end_time

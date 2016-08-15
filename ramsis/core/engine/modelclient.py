@@ -12,14 +12,15 @@ class ModelClient(QtCore.QObject):
     # Signal emitted when model results have been retrieved
     finished = QtCore.pyqtSignal(object)
 
-    def __init__(self, model_info, settings):
+    def __init__(self, model_info, project_settings):
         super(ModelClient, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.model_info = model_info
-        key = 'worker/%s_url' % self.model_info['model']
-        key_database = 'worker/%s_database_url' % self.model_info['model']
-        self.url = settings.value(key)
-        self.url_database = settings.value(key_database)
+        url = 'project_settings.%s_url' % self.model_info['model']
+        url_database = 'project_settings.%s_database_url'\
+                       % self.model_info['model']
+        self.url = eval(url)
+        self.url_database = eval(url_database)
         self.job_id = None
         self.model = None
 

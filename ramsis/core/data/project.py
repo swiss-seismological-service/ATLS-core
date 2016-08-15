@@ -200,3 +200,6 @@ class Project(QtCore.QObject, OrmBase):
             settings.value("worker/shapiro_url")
         self.shapiro_database_url =\
             settings.value("worker/shapiro_database_url")
+
+    def get_settings(self):
+        return self._store.read_first(Project)

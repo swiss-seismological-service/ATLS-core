@@ -15,7 +15,7 @@ active_models = []
 clients = []
 
 
-def load_models(settings):
+def load_models(settings, project_settings):
     """
     Load ISHA models. Register new models here.
 
@@ -56,7 +56,7 @@ def load_models(settings):
     #     }
     #     active_models.append(model)
 
-    clients = [ModelClient(m, settings) for m in active_models]
+    clients = [ModelClient(m, project_settings) for m in active_models]
 
     titles = [m["title"] for m in active_models]
     logging.getLogger(__name__).info('Loaded models: ' + ', '.join(titles))

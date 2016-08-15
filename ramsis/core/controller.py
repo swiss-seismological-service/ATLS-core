@@ -97,12 +97,13 @@ class Controller(QtCore.QObject):
         self.engine.observe_project(self.project)
         self.project_loaded.emit(self.project)
         self._logger.info('... initializing runners...')
-        self.fdsnws_runner = FDSNWSRunner(self._settings)
-        self.hydws_runner = HYDWSRunner(self._settings)
+        project_settings = self.project.get_settings()
+        self.fdsnws_runner = FDSNWSRunner(self._settings, project_settings)
+        self.hydws_runner = HYDWSRunner(self._settings, project_settings)
         self.fdsnws_runner.finished.connect(self._on_fdsnws_runner_finished)
         self.hydws_runner.finished.connect(self._on_hydws_runner_finished)
         self._logger.info('... loading IS models...')
-        mc.load_models(self._settings)
+        mc.load_models(self._settings, project_settings)
         self._logger.info('... reloading scheduled tasks...')
         self._reload_scheduled_tasks()
         self._logger.info('...done')
@@ -239,6 +240,7 @@ class Controller(QtCore.QObject):
 
         """
         self._scheduler.clear()
+        project_settings = self.project.get_settings()
 
         # Forecasting Task
         dt = self._settings.value('engine/fc_interval')
@@ -258,14 +260,14 @@ class Controller(QtCore.QObject):
         self._scheduler.add_task(rate_update_task)
 
         # Fetching seismic data over fdsnws
-        minutes = self._settings.value('data_acquisition/fdsnws_interval')
+        minutes = project_settings.fdsnws_interval
         task = ScheduledTask(task_function=self._import_fdsnws_data,
                              dt=timedelta(minutes=minutes),
                              name='FDSNWS')
         self._scheduler.add_task(task)
 
         # Fetching hydraulic data
-        minutes = self._settings.value('data_acquisition/hydws_interval')
+        minutes = project_settings.hydws_interval
         task = ScheduledTask(task_function=self._import_hydws_data,
                              dt=timedelta(minutes=minutes),
                              name='HYDWS')
