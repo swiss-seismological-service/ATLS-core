@@ -64,14 +64,11 @@ class Controller(QtCore.QObject):
         self.fdsnws_runner = None
         self.hydws_runner = None
 
-        # Load active IS models
-        mc.load_models(settings)
-
         # Initialize simulator
         self.simulator = Simulator(self._simulation_handler)
 
         # Scheduler
-        self._scheduler = self._create_task_scheduler()
+        self._scheduler = TaskScheduler()
 
         # Time, state and other internals
         self._logger = logging.getLogger(__name__)
@@ -104,6 +101,10 @@ class Controller(QtCore.QObject):
         self.hydws_runner = HYDWSRunner(self._settings)
         self.fdsnws_runner.finished.connect(self._on_fdsnws_runner_finished)
         self.hydws_runner.finished.connect(self._on_hydws_runner_finished)
+        self._logger.info('... loading IS models...')
+        mc.load_models(self._settings)
+        self._logger.info('... reloading scheduled tasks...')
+        self._reload_scheduled_tasks()
         self._logger.info('...done')
 
     def create_project(self, path):
@@ -232,12 +233,12 @@ class Controller(QtCore.QObject):
 
     # Scheduler management
 
-    def _create_task_scheduler(self):
+    def _reload_scheduled_tasks(self):
         """
-        Creates the task scheduler and schedules recurring tasks
+        Clear the task scheduler, then schedule recurring tasks
 
         """
-        scheduler = TaskScheduler()
+        self._scheduler.clear()
 
         # Forecasting Task
         dt = self._settings.value('engine/fc_interval')
@@ -245,7 +246,7 @@ class Controller(QtCore.QObject):
             task_function=self.engine.run_forecast,
             dt=timedelta(hours=dt),
             name='Forecast')
-        scheduler.add_task(forecast_task)
+        self._scheduler.add_task(forecast_task)
         self.engine._forecast_task = forecast_task  # keep reference for later
 
         # Rate computations
@@ -254,23 +255,21 @@ class Controller(QtCore.QObject):
             task_function=self._update_rates,
             dt=timedelta(minutes=dt),
             name='Rate update')
-        scheduler.add_task(rate_update_task)
+        self._scheduler.add_task(rate_update_task)
 
         # Fetching seismic data over fdsnws
         minutes = self._settings.value('data_acquisition/fdsnws_interval')
         task = ScheduledTask(task_function=self._import_fdsnws_data,
                              dt=timedelta(minutes=minutes),
                              name='FDSNWS')
-        scheduler.add_task(task)
+        self._scheduler.add_task(task)
 
         # Fetching hydraulic data
         minutes = self._settings.value('data_acquisition/hydws_interval')
         task = ScheduledTask(task_function=self._import_hydws_data,
                              dt=timedelta(minutes=minutes),
                              name='HYDWS')
-        scheduler.add_task(task)
-
-        return scheduler
+        self._scheduler.add_task(task)
 
     def reset(self, t0):
         """

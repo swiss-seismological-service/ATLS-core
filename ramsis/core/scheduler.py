@@ -97,6 +97,13 @@ class TaskScheduler:
         """
         self.scheduled_tasks.append(task)
 
+    def clear(self):
+        """
+        Remove all tasks from the scheduler
+
+        """
+        self.scheduled_tasks = []
+
     def reset_schedule(self, t0):
         """
         Reset the scheduled times by scheduling the first runs for all
