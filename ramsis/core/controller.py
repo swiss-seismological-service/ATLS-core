@@ -91,7 +91,11 @@ class Controller(QtCore.QObject):
         self._logger.info('Loading project at ' + path +
                           ' - This might take a while...')
         store = Store(store_path, OrmBase)
-        self.project = Project(store, os.path.basename(path))
+        project = store.read_first(Project)
+        if not project:
+            self._logger.error('Could not load project:' + path)
+            return
+        self.project = project
         self.project.project_time_changed.connect(self._on_project_time_change)
         self.engine.observe_project(self.project)
         self.project_loaded.emit(self.project)
@@ -116,8 +120,8 @@ class Controller(QtCore.QObject):
         store_path = 'sqlite:///' + path
         self._logger.info('Creating project at ' + path)
         store = Store(store_path, OrmBase)
-        store.commit()
-        store.close()
+        project = Project(store)
+        project.close()
         self.open_project(path)
 
     def close_project(self):
