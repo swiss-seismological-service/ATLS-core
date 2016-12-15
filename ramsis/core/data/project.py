@@ -10,14 +10,13 @@ from datetime import datetime
 
 from PyQt4 import QtCore
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, reconstructor
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
 from seismics import SeismicCatalog
 from hydraulics import InjectionHistory
 from forecast import ForecastSet
 from injectionwell import InjectionWell
-from core.tools.eqstats import SeismicRateHistory
 
 
 class Project(QtCore.QObject, OrmBase):
@@ -52,24 +51,22 @@ class Project(QtCore.QObject, OrmBase):
     project_time_changed = QtCore.pyqtSignal(datetime)
 
     def __init__(self, store, title=''):
-        """ Create a project based on the data that is contained in *store* """
+        """ Create a new project and persist to database """
         super(Project, self).__init__()
         self._store = store
-        self.seismic_history = SeismicCatalog(self._store)
-        self.seismic_history.reload_from_store()
-        self.hydraulic_history = InjectionHistory(self._store)
-        self.hydraulic_history.reload_from_store()
-        self.rate_history = SeismicRateHistory()
-        self.forecast_history = ForecastSet(self._store)
-        self.forecast_history.reload_from_store()
         self.title = title
-
-        # These inform us when new IS forecasts become available
-
         # FIXME: hardcoded for testing purposes
         # These are the basel well tip coordinates (in CH-1903)
         self.injection_well = InjectionWell(4740.3, 270645.0, 611631.0)
+        self.injection_history = InjectionHistory(self._store)
+        self.forecast_set = ForecastSet(self._store)
+        self.seismic_catalog = SeismicCatalog(self._store)
+        self._project_time = None
+        self.init_on_load()
+        self._store.add([self])
 
+    @reconstructor
+    def init_on_load(self):
         # Set the project time to the time of the first event
         event = self.earliest_event()
         self._project_time = event.date_time if event else datetime.now()
