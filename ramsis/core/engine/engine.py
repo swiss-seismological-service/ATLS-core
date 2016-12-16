@@ -37,7 +37,7 @@ class Engine(QtCore.QObject):
         self._logger.info('Initiating forecast')
 
         self._forecast = self._create_forecast(t_run)
-        self._project.forecast_history.add(self._forecast, persist=True)
+        self._project.forecast_set.add(self._forecast, persist=True)
         self.busy = True
         # in future we may run more than one scenario
         self._forecast_job = ForecastJob(self._settings)
@@ -47,7 +47,7 @@ class Engine(QtCore.QObject):
     def fc_job_complete(self):
         self._forecast.result = [self._forecast_job.result]
         # update not add ?
-        self._project.forecast_history.add(self._forecast, persist=True)
+        self._project.forecast_set.add(self._forecast, persist=True)
         self.busy = False
         self.forecast_complete.emit()
 

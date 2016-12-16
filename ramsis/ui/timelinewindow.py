@@ -215,7 +215,7 @@ class ForecastsPresenter(TimelinePresenter):
     def on_rate_history_change(self, _):
         self._show_rates()
 
-    def on_forecast_history_change(self, _):
+    def on_forecast_set_change(self, _):
         self._show_forecast_rates()
 
     # Rate display update methods
@@ -334,9 +334,9 @@ class TimelineWindow(QtGui.QDialog):
             self.forecasts_presenter.history = None
             self.forecasts_presenter.rate_history = None
         else:
-            self.hydraulics_presenter.history = project.hydraulic_history
-            self.seismicity_presenter.history = project.seismic_history
-            self.forecasts_presenter.history = project.forecast_history
+            self.hydraulics_presenter.history = project.injection_history
+            self.seismicity_presenter.history = project.seismic_catalog
+            self.forecasts_presenter.history = project.forecast_set
             self.forecasts_presenter.rate_history = project.rate_history
 
     def _zoom_to_markers(self):

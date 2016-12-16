@@ -90,20 +90,20 @@ class SimulationWindow(QtGui.QDialog):
         # Make sure we get updated on project changes
         project.will_close.connect(self.on_project_will_close)
         project.project_time_changed.connect(self.on_project_time_change)
-        project.seismic_history.history_changed.connect(
-            self.on_seismic_history_change)
-        project.hydraulic_history.history_changed.connect(
-            self.on_hydraulic_history_change)
+        project.seismic_catalog.history_changed.connect(
+            self.on_seismic_catalog_change)
+        project.injection_history.history_changed.connect(
+            self.on_injection_history_change)
         self.update_controls()
         self.update_status()
 
     def on_project_will_close(self, project):
         project.will_close.disconnect(self.on_project_will_close)
         project.project_time_changed.disconnect(self.on_project_time_change)
-        project.seismic_history.history_changed.disconnect(
-            self.on_seismic_history_change)
-        project.hydraulic_history.history_changed.disconnect(
-            self.on_hydraulic_history_change)
+        project.seismic_catalog.history_changed.disconnect(
+            self.on_seismic_catalog_change)
+        project.injection_history.history_changed.disconnect(
+            self.on_injection_history_change)
         self.project = None
         self.update_controls()
         self.update_status()
@@ -111,10 +111,10 @@ class SimulationWindow(QtGui.QDialog):
     def on_project_time_change(self, _):
         self.update_status()
 
-    def on_seismic_history_change(self, _):
+    def on_seismic_catalog_change(self, _):
         self.update_status()
 
-    def on_hydraulic_history_change(self, _):
+    def on_injection_history_change(self, _):
         self.update_status()
 
     # Status Updates
@@ -136,7 +136,7 @@ class SimulationWindow(QtGui.QDialog):
         t_forecast = core.engine.t_next_forecast
         speed = self.ramsis_core.simulator.speed
         if core.simulator.state == SimulatorState.RUNNING:
-            event = self.project.seismic_history.latest_event(time)
+            event = self.project.seismic_catalog.latest_event(time)
             status = 'Simulating at ' + str(speed) + 'x'
             if core.forecast_job.busy:
                 status += ' - Computing Forecast'
@@ -145,7 +145,7 @@ class SimulationWindow(QtGui.QDialog):
             self.ui.lastEventLabel.setText(str(event))
             self.ui.nextForecastLabel.setText(str(t_forecast.ctime()))
         elif core.simulator.state == SimulatorState.PAUSED:
-            event = self.project.seismic_history.latest_event(time)
+            event = self.project.seismic_catalog.latest_event(time)
             self.ui.coreStatusLabel.setText('Paused')
             self.ui.projectTimeLabel.setText(time.ctime())
             self.ui.lastEventLabel.setText(str(event))

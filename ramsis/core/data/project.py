@@ -26,8 +26,8 @@ class Project(QtCore.QObject, OrmBase):
 
     .. pyqt4:signal:project_time_changed: emitted when the project time changes
 
-    :ivar seismic_history: The seismic history of the project
-    :ivar hydraulic_history: The hydraulic history of the project
+    :ivar seismic_catalog: The seismic history of the project
+    :ivar injection_history: The hydraulic history of the project
 
     """
     __metaclass__ = DeclarativeQObjectMeta
@@ -105,8 +105,8 @@ class Project(QtCore.QObject, OrmBase):
 
         """
         try:
-            es = self.seismic_history[0]
-            eh = self.hydraulic_history[0]
+            es = self.seismic_catalog[0]
+            eh = self.injection_history[0]
         except IndexError:
             return None
         if es is None and eh is None:
@@ -124,8 +124,8 @@ class Project(QtCore.QObject, OrmBase):
 
         """
         try:
-            es = self.seismic_history[-1]
-            eh = self.hydraulic_history[-1]
+            es = self.seismic_catalog[-1]
+            eh = self.injection_history[-1]
         except IndexError:
             return None
         if es is None and eh is None:
