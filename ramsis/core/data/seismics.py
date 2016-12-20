@@ -7,12 +7,12 @@ History of seismic events
 import logging
 import traceback
 
+from PyQt4 import QtCore
 from sqlalchemy import Column, Table
 from sqlalchemy import Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
-from core.data.eventhistory import EventHistory
 from core.data.geometry import Point
 
 _catalogs_events_table = Table('catalogs_events', OrmBase.metadata,
@@ -22,7 +22,7 @@ _catalogs_events_table = Table('catalogs_events', OrmBase.metadata,
                                       ForeignKey('seismic_events.id')))
 
 
-class SeismicCatalog(EventHistory, OrmBase):
+class SeismicCatalog(QtCore.QObject, OrmBase):
     """
     Provides a history of seismic events and functions to read and write them
     from/to a persistent store. The class uses Qt signals to signal changes.
@@ -54,8 +54,8 @@ class SeismicCatalog(EventHistory, OrmBase):
     # endregion
 
     def __init__(self, store):
-        EventHistory.__init__(self, store, SeismicEvent,
-                              date_time_attr=SeismicEvent.date_time)
+        QtCore.QObject.__init__(self)
+        self.store = store
         self._logger = logging.getLogger(__name__)
 
     def import_events(self, importer, timerange=None):
@@ -104,8 +104,29 @@ class SeismicCatalog(EventHistory, OrmBase):
 
     def events_before(self, end_date, mc=0):
         """ Returns all events >mc before and including *end_date* """
-        return [e for e in self._events
-                if e.date_time < end_date and e.magnitude > mc]
+        predicate = (SeismicEvent.date_time <= end_date,
+                     SeismicEvent.magnitude > mc)
+        events = self.store.read_all(SeismicEvent, predicate=predicate,
+                                     order="date_time")
+        return events
+
+    def latest_event(self, time=None):
+        """
+        Returns the latest event before time *time*
+
+        If time constraint is not given, the latest event in the entire history
+        is returned.
+
+        :param time: time constraint for latest event
+        :type time: datetime
+
+        """
+        predicate = None
+        if time:
+            predicate = SeismicEvent.date_time < time
+        events = self.store.read_all(SeismicEvent, predicate=predicate,
+                                     order="date_time")
+        return events[-1] if len(events) > 0 else None
 
     def clear_events(self):
         """
@@ -128,6 +149,17 @@ class SeismicCatalog(EventHistory, OrmBase):
         for item in arguments.items():
             setattr(copy, *item)
         return copy
+
+    def __getitem__(self, item):
+        events = self.store.read_all(SeismicEvent)
+        if len(events) == 0:
+            return None
+        else:
+            return events[item]
+
+    def __len__(self):
+        events = self.store.read_all(SeismicEvent)
+        return len(events)
 
 
 class SeismicEvent(OrmBase):

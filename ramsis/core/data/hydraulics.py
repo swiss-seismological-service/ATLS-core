@@ -7,13 +7,13 @@ History of hydraulic events, i.e changes in flow or pressure
 import logging
 import traceback
 
+from PyQt4 import QtCore
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ormbase import OrmBase, DeclarativeQObjectMeta
-from core.data.eventhistory import EventHistory
 
 
-class InjectionHistory(EventHistory, OrmBase):
+class InjectionHistory(QtCore.QObject, OrmBase):
     """
     Provides a history of hydraulic events and functions to read and write them
     from/to a persistent store. The class uses Qt signals to signal changes.
@@ -34,7 +34,8 @@ class InjectionHistory(EventHistory, OrmBase):
     # endregion
 
     def __init__(self, store):
-        EventHistory.__init__(self, store, InjectionSample)
+        QtCore.QObject.__init__(self)
+        self.store = store
         self._logger = logging.getLogger(__name__)
 
     def import_events(self, importer, timerange=None):
@@ -104,6 +105,13 @@ class InjectionHistory(EventHistory, OrmBase):
         for item in arguments.items():
             setattr(copy, *item)
         return copy
+
+    def __getitem__(self, item):
+        events = self.store.read_all(InjectionSample)
+        if len(events) == 0:
+            return None
+        else:
+            return events[item]
 
 
 class InjectionPlan(OrmBase):

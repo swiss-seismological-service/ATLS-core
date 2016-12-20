@@ -18,12 +18,10 @@ from sqlalchemy.inspection import inspect
 from ormbase import OrmBase, DeclarativeQObjectMeta
 from skilltest import SkillTest
 
-from core.data.eventhistory import EventHistory
-
 from PyQt4 import QtCore
 
 
-class ForecastSet(EventHistory, OrmBase):
+class ForecastSet(QtCore.QObject, OrmBase):
     """
     Planned and executed forecasts
 
@@ -41,10 +39,45 @@ class ForecastSet(EventHistory, OrmBase):
                              cascade='all, delete-orphan')
     # endregion
 
+    history_changed = QtCore.pyqtSignal(dict)
+    """
+    `history_changed` is a Qt signal, emitted when the history changes. The
+    signal carries a dict with further information about the changes
+    contained as follows:
+
+        ``history``: the history object that has changed
+
+    """
+
     def __init__(self, store):
-        super(ForecastSet, self).\
-            __init__(store, Forecast,
-                     date_time_attr=Forecast.forecast_time)
+        QtCore.QObject.__init__(self)
+        self.store = store
+
+    def clear(self):
+        """
+        Delete all data from the db
+
+        """
+        self.store.purge_entity(Forecast)
+        self._emit_change_signal()
+
+    def add(self, ev):
+        """
+        Add one or more events to the history (and store)
+
+        :param ev: event or list of events
+
+        """
+        try:
+            ev_list = [e for e in ev]
+        except TypeError:
+            ev_list = [ev]
+        self.store.add(ev_list)
+        self._emit_change_signal()
+
+    def _emit_change_signal(self):
+        change_dict = {'history': self}
+        self.history_changed.emit(change_dict)
 
 
 class Forecast(OrmBase):
