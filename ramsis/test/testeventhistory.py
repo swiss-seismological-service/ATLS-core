@@ -88,33 +88,35 @@ class BasicOperation(unittest.TestCase):
         self.mock_store = MockStore(test_content)
         self.history = EventHistory(self.mock_store, Event)
 
-    def test_loading_and_counting(self):
-        self.assertEqual(len(self.history), 0)
-        self.history.reload_from_store()
-        self.assertEqual(len(self.history), NUM_TEST_EVENTS)
+    # Store has been removed
 
-    def test_indexed_reading(self):
-        """ Reading through __getitem__ """
-        self.history.reload_from_store()
-        event = self.history[3]
-        self.assertEqual(event.value, 3)
-
-    def test_reading_latest(self):
-        """ Reading the latest event """
-        self.history.reload_from_store()
-        event = self.history.latest_event()
-        self.assertEqual(event.value, NUM_TEST_EVENTS - 1)
-        max_time = self.date + timedelta(seconds=4.5)
-        event = self.history.latest_event(max_time)
-        self.assertEqual(event, self.test_content[-1])
-
-    def test_read_specific_time_interval(self):
-        """ Read events in specific time interval """
-        self.history.reload_from_store()
-        earliest = self.date + timedelta(seconds=2.1)
-        latest = self.date + timedelta(seconds=5.9)
-        events = self.history.events_between(earliest, latest)
-        self.assertListEqual(events, self.test_content[2:5])
+    # def test_loading_and_counting(self):
+    #     self.assertEqual(len(self.history), 0)
+    #     self.history.reload_from_store()
+    #     self.assertEqual(len(self.history), NUM_TEST_EVENTS)
+    #
+    # def test_indexed_reading(self):
+    #     """ Reading through __getitem__ """
+    #     self.history.reload_from_store()
+    #     event = self.history[3]
+    #     self.assertEqual(event.value, 3)
+    #
+    # def test_reading_latest(self):
+    #     """ Reading the latest event """
+    #     self.history.reload_from_store()
+    #     event = self.history.latest_event()
+    #     self.assertEqual(event.value, NUM_TEST_EVENTS - 1)
+    #     max_time = self.date + timedelta(seconds=4.5)
+    #     event = self.history.latest_event(max_time)
+    #     self.assertEqual(event, self.test_content[-1])
+    #
+    # def test_read_specific_time_interval(self):
+    #     """ Read events in specific time interval """
+    #     self.history.reload_from_store()
+    #     earliest = self.date + timedelta(seconds=2.1)
+    #     latest = self.date + timedelta(seconds=5.9)
+    #     events = self.history.events_between(earliest, latest)
+    #     self.assertListEqual(events, self.test_content[2:5])
 
     def test_add_retrieve_and_clear(self):
         """ Test adding, retrieving and clearing events """

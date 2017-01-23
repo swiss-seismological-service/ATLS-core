@@ -49,21 +49,20 @@ class ForecastSet(QtCore.QObject, OrmBase):
 
     """
 
-    def __init__(self, store):
+    def __init__(self):
         QtCore.QObject.__init__(self)
-        self.store = store
 
-    def clear(self):
+    def clear(self, session):
         """
         Delete all data from the db
 
         """
-        self.store.purge_entity(Forecast)
+        self._purge_events(session)
         self._emit_change_signal()
 
-    def add(self, ev):
+    def add(self, session, ev):
         """
-        Add one or more events to the history (and store)
+        Add one or more events to the history
 
         :param ev: event or list of events
 
@@ -72,8 +71,24 @@ class ForecastSet(QtCore.QObject, OrmBase):
             ev_list = [e for e in ev]
         except TypeError:
             ev_list = [ev]
-        self.store.add(ev_list)
+        self._add_events(session, ev_list)
         self._emit_change_signal()
+
+    def _purge_events(self, session, predicate=None):
+        query = session.query(Forecast)
+        if predicate is not None:
+            query = query.filter(*predicate)
+        for obj in query:
+            session.delete(obj)
+        session.commit()
+
+    def _add_events(self, session, events):
+        for i, o in enumerate(events):
+            session.add(o)
+            if i % 1000 == 0:
+                session.flush()
+        print('committing')
+        session.commit()
 
     def _emit_change_signal(self):
         change_dict = {'history': self}

@@ -66,7 +66,7 @@ class SeismicCatalogSchema(BaseSchema):
 
     @post_load
     def make_seismic_catalog(self, data):
-        seismic_catalog = SeismicCatalog(store=None)
+        seismic_catalog = SeismicCatalog()
         for key in data:
             setattr(seismic_catalog, key, data[key])
         return seismic_catalog
@@ -89,7 +89,7 @@ class InjectionHistorySchema(BaseSchema):
 
     @post_load
     def make_injection_history(self, data):
-        injection_history = InjectionHistory(store=None)
+        injection_history = InjectionHistory()
         for key in data:
             setattr(injection_history, key, data[key])
         return injection_history
@@ -204,7 +204,7 @@ class ForecastSetSchema(BaseSchema):
 
     @post_load
     def make_forecast_set(self, data):
-        forecast_set = ForecastSet(store=None)
+        forecast_set = ForecastSet()
         for key in data:
             setattr(forecast_set, key, data[key])
         return forecast_set
@@ -219,7 +219,7 @@ class ProjectSchema(BaseSchema):
 
     @post_load
     def make_project(self, data):
-        project = Project(store=None)
+        project = Project()
         for key in data:
             setattr(project, key, data[key])
         return project

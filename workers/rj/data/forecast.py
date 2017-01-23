@@ -18,12 +18,10 @@ from sqlalchemy.inspection import inspect
 from ormbase import OrmBase, DeclarativeQObjectMeta
 from skilltest import SkillTest
 
-from eventhistory import EventHistory
-
 from PyQt4 import QtCore
 
 
-class ForecastSet(EventHistory, OrmBase):
+class ForecastSet(QtCore.QObject, OrmBase):
     """
     Planned and executed forecasts
 
@@ -41,10 +39,60 @@ class ForecastSet(EventHistory, OrmBase):
                              cascade='all, delete-orphan')
     # endregion
 
-    def __init__(self, store):
-        super(ForecastSet, self).\
-            __init__(store, Forecast,
-                     date_time_attr=Forecast.forecast_time)
+    history_changed = QtCore.pyqtSignal(dict)
+    """
+    `history_changed` is a Qt signal, emitted when the history changes. The
+    signal carries a dict with further information about the changes
+    contained as follows:
+
+        ``history``: the history object that has changed
+
+    """
+
+    def __init__(self):
+        QtCore.QObject.__init__(self)
+
+    def clear(self, session):
+        """
+        Delete all data from the db
+
+        """
+        self._purge_events(session)
+        self._emit_change_signal()
+
+    def add(self, session, ev):
+        """
+        Add one or more events to the history
+
+        :param ev: event or list of events
+
+        """
+        try:
+            ev_list = [e for e in ev]
+        except TypeError:
+            ev_list = [ev]
+        self._add_events(session, ev_list)
+        self._emit_change_signal()
+
+    def _purge_events(self, session, predicate=None):
+        query = session.query(Forecast)
+        if predicate is not None:
+            query = query.filter(*predicate)
+        for obj in query:
+            session.delete(obj)
+        session.commit()
+
+    def _add_events(self, session, events):
+        for i, o in enumerate(events):
+            session.add(o)
+            if i % 1000 == 0:
+                session.flush()
+        print('committing')
+        session.commit()
+
+    def _emit_change_signal(self):
+        change_dict = {'history': self}
+        self.history_changed.emit(change_dict)
 
 
 class Forecast(OrmBase):

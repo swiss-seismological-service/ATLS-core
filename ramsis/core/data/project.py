@@ -50,26 +50,25 @@ class Project(QtCore.QObject, OrmBase):
     will_close = QtCore.pyqtSignal(object)
     project_time_changed = QtCore.pyqtSignal(datetime)
 
-    def __init__(self, store, title=''):
+    def __init__(self, title=''):
         """ Create a new project and persist to database """
         super(Project, self).__init__()
-        self._store = store
         self.title = title
         # FIXME: hardcoded for testing purposes
         # These are the basel well tip coordinates (in CH-1903)
         self.injection_well = InjectionWell(4740.3, 270645.0, 611631.0)
-        self.injection_history = InjectionHistory(self._store)
-        self.forecast_set = ForecastSet(self._store)
-        self.seismic_catalog = SeismicCatalog(self._store)
+        self.injection_history = InjectionHistory()
+        self.forecast_set = ForecastSet()
+        self.seismic_catalog = SeismicCatalog()
         self._project_time = None
-        self.init_on_load()
-        self._store.add([self])
 
-    @reconstructor
-    def init_on_load(self):
         # Set the project time to the time of the first event
         event = self.earliest_event()
         self._project_time = event.date_time if event else datetime.now()
+
+    @reconstructor
+    def init_on_load(self):
+        self.__init__()
 
     def close(self):
         """
@@ -79,7 +78,6 @@ class Project(QtCore.QObject, OrmBase):
 
         """
         self.will_close.emit(self)
-        self._store.close()
 
     @property
     def project_time(self):

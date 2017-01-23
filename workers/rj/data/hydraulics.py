@@ -7,16 +7,16 @@ History of hydraulic events, i.e changes in flow or pressure
 import logging
 import traceback
 
+from PyQt4 import QtCore
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ormbase import OrmBase, DeclarativeQObjectMeta
-from eventhistory import EventHistory
 
 
-class InjectionHistory(EventHistory, OrmBase):
+class InjectionHistory(QtCore.QObject, OrmBase):
     """
     Provides a history of hydraulic events and functions to read and write them
-    from/to a persistent store. The class uses Qt signals to signal changes.
+    from/to a persistent database. The class uses Qt signals to signal changes.
 
     """
     __metaclass__ = DeclarativeQObjectMeta
@@ -33,11 +33,11 @@ class InjectionHistory(EventHistory, OrmBase):
                            cascade='all')
     # endregion
 
-    def __init__(self, store):
-        EventHistory.__init__(self, store, InjectionSample)
+    def __init__(self):
+        QtCore.QObject.__init__(self)
         self._logger = logging.getLogger(__name__)
 
-    def import_events(self, importer, timerange=None):
+    def import_events(self, session, importer, timerange=None):
         """
         Imports hydraulic events from a csv file by using an EventReporter
 
@@ -76,21 +76,19 @@ class InjectionHistory(EventHistory, OrmBase):
             if timerange:
                 predicate = (self.entity.date_time >= timerange[0],
                              self.entity.date_time <= timerange[1])
-            self.store.purge_entity(self.entity, predicate)
-            self.store.add(events)
+            self._purge_events(session, predicate)
+            self._add_events(session, events)
             self._logger.info('Imported {} hydraulic events.'.format(
                 len(events)))
-            self.reload_from_store()
             self._emit_change_signal({})
 
-    def clear_events(self):
+    def clear_events(self, session):
         """
         Clear all hydraulic events from the database
 
         """
-        self.store.purge_entity(self.entity)
+        self._purge_events(session)
         self._logger.info('Cleared all hydraulic events.')
-        self.reload_from_store()
         self._emit_change_signal({})
 
     def copy(self):
@@ -104,6 +102,29 @@ class InjectionHistory(EventHistory, OrmBase):
         for item in arguments.items():
             setattr(copy, *item)
         return copy
+
+    def _purge_events(self, session, predicate=None):
+        query = session.query(self.entity)
+        if predicate is not None:
+            query = query.filter(*predicate)
+        for obj in query:
+            session.delete(obj)
+        session.commit()
+
+    def _add_events(self, session, events):
+        for i, o in enumerate(events):
+            session.add(o)
+            if i % 1000 == 0:
+                session.flush()
+        print('committing')
+        session.commit()
+
+    def __getitem__(self, item):
+        events = self.store.read_all(InjectionSample)
+        if len(events) == 0:
+            return None
+        else:
+            return events[item]
 
 
 class InjectionPlan(OrmBase):

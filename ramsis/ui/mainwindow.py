@@ -100,10 +100,10 @@ class MainWindow(QtGui.QMainWindow):
         self.update_status()
         self.update_controls()
 
-    def on_seismic_catalog_change(self, _):
+    def on_seismic_catalog_change(self):
         self.update_status()
 
-    def on_injection_history_change(self, _):
+    def on_injection_history_change(self):
         self.update_status()
 
     def on_sim_state_change(self, _):
@@ -351,7 +351,8 @@ class MainWindow(QtGui.QMainWindow):
     # Plot Helpers
 
     def _replot_3d_event_data(self, t):
-        events = self.project.seismic_catalog.events_before(t)
+        events = self.project.seismic_catalog.events_before(
+            self.ramsis_core.data_session, t)
         if self.event_3d_window is None or len(events) == 0:
             return
         loc = np.array([(e.x, e.y, e.z) for e in events])

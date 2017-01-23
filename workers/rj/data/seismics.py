@@ -7,13 +7,13 @@ History of seismic events
 import logging
 import traceback
 
+from PyQt4 import QtCore
 from sqlalchemy import Column, Table
 from sqlalchemy import Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
-from eventhistory import EventHistory
-from geometry import Point
+from core.data.geometry import Point
 
 _catalogs_events_table = Table('catalogs_events', OrmBase.metadata,
                                Column('seismic_catalogs_id', Integer,
@@ -22,10 +22,10 @@ _catalogs_events_table = Table('catalogs_events', OrmBase.metadata,
                                       ForeignKey('seismic_events.id')))
 
 
-class SeismicCatalog(EventHistory, OrmBase):
+class SeismicCatalog(QtCore.QObject, OrmBase):
     """
     Provides a history of seismic events and functions to read and write them
-    from/to a persistent store. The class uses Qt signals to signal changes.
+    from/to a persistent database. The class uses Qt signals to signal changes.
 
     """
     __metaclass__ = DeclarativeQObjectMeta
@@ -53,12 +53,11 @@ class SeismicCatalog(EventHistory, OrmBase):
                               back_populates='reference_catalog')
     # endregion
 
-    def __init__(self, store):
-        EventHistory.__init__(self, store, SeismicEvent,
-                              date_time_attr=SeismicEvent.date_time)
+    def __init__(self):
+        QtCore.QObject.__init__(self)
         self._logger = logging.getLogger(__name__)
 
-    def import_events(self, importer, timerange=None):
+    def import_events(self, session, importer, timerange=None):
         """
         Imports seismic events from a csv file by using an EventImporter
 
@@ -95,26 +94,45 @@ class SeismicCatalog(EventHistory, OrmBase):
             if timerange:
                 predicate = (self.entity.date_time >= timerange[0],
                              self.entity.date_time <= timerange[1])
-            self.store.purge_entity(self.entity, predicate)
-            self.store.add(events)
+            self._purge_events(session, predicate)
+            self._add_events(session, events)
             self._logger.info('Imported {} seismic events.'.format(
                 len(events)))
-            self.reload_from_store()
             self._emit_change_signal({})
 
-    def events_before(self, end_date, mc=0):
+    def events_before(self, session, end_date, mc=0):
         """ Returns all events >mc before and including *end_date* """
-        return [e for e in self._events
-                if e.date_time < end_date and e.magnitude > mc]
+        predicate = (SeismicEvent.date_time <= end_date,
+                     SeismicEvent.magnitude > mc)
+        events = self._get_events(session, predicate=predicate,
+                                  order="date_time")
+        return events
 
-    def clear_events(self):
+    def latest_event(self, session, time=None):
+        """
+        Returns the latest event before time *time*
+
+        If time constraint is not given, the latest event in the entire history
+        is returned.
+
+        :param time: time constraint for latest event
+        :type time: datetime
+
+        """
+        predicate = None
+        if time:
+            predicate = SeismicEvent.date_time < time
+        events = self._get_events(session, predicate=predicate,
+                                  order="date_time")
+        return events[-1] if len(events) > 0 else None
+
+    def clear_events(self, session):
         """
         Clear all seismic events from the database
 
         """
-        self.store.purge_entity(self.entity)
+        self._purge_events(session)
         self._logger.info('Cleared all seismic events.')
-        self.reload_from_store()
         self._emit_change_signal({})
 
     def copy(self):
@@ -124,10 +142,36 @@ class SeismicCatalog(EventHistory, OrmBase):
         for name, column in self.__mapper__.columns.items():
             if not (column.primary_key or column.unique):
                 arguments[name] = getattr(self, name)
-        copy = self.__class__(self.store)
+        copy = self.__class__()
         for item in arguments.items():
             setattr(copy, *item)
         return copy
+
+    def _purge_events(self, session, predicate=None):
+        query = session.query(self.entity)
+        if predicate is not None:
+            query = query.filter(*predicate)
+        for obj in query:
+            session.delete(obj)
+        session.commit()
+
+    def _add_events(self, session, events):
+        for i, o in enumerate(events):
+            session.add(o)
+            if i % 1000 == 0:
+                session.flush()
+        print('committing')
+        session.commit()
+
+    def _get_events(self, session, predicate=None, order=None):
+        query = session.query(SeismicEvent)
+        if predicate is not None:
+            query = query.filter(predicate)
+        if order is not None:
+            query = query.order_by(None)
+            query = query.order_by(order)
+        results = query.all()
+        return results
 
 
 class SeismicEvent(OrmBase):

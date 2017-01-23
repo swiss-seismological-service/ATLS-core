@@ -111,10 +111,10 @@ class SimulationWindow(QtGui.QDialog):
     def on_project_time_change(self, _):
         self.update_status()
 
-    def on_seismic_catalog_change(self, _):
+    def on_seismic_catalog_change(self):
         self.update_status()
 
-    def on_injection_history_change(self, _):
+    def on_injection_history_change(self):
         self.update_status()
 
     # Status Updates

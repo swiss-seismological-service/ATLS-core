@@ -13,8 +13,9 @@ from datetime import timedelta
 import os
 
 from PyQt4 import QtCore
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from core.data.store import Store
 from core.data.project import Project
 from core.data.ormbase import OrmBase
 from core.simulator import Simulator, SimulatorState
@@ -63,6 +64,11 @@ class Controller(QtCore.QObject):
         self.fdsnws_runner = None
         self.hydws_runner = None
 
+        # Data
+        self.data_engine = None
+        self.data_model = None
+        self.data_session = None
+
         # Initialize simulator
         self.simulator = Simulator(self._simulation_handler)
 
@@ -87,11 +93,11 @@ class Controller(QtCore.QObject):
             return
         # We add an additional / in front of the url. So now we have 3 slashes
         # in total, because host and db-name section are both empty for sqlite
-        store_path = 'sqlite:///' + path
         self._logger.info('Loading project at ' + path +
                           ' - This might take a while...')
-        store = Store(store_path, OrmBase)
-        project = store.read_first(Project)
+        url = 'sqlite:///' + path
+        self._load_data(url)
+        project = self.data_session.query(Project).first()
         if not project:
             self._logger.error('Could not load project:' + path)
             return
@@ -117,10 +123,12 @@ class Controller(QtCore.QObject):
             self.close_project()
         if os.path.exists(path):
             os.remove(path)
-        store_path = 'sqlite:///' + path
         self._logger.info('Creating project at ' + path)
-        store = Store(store_path, OrmBase)
-        project = Project(store)
+        url = 'sqlite:///' + path
+        self._load_data(url)
+        project = Project()
+        self.data_session.add(project)
+        self.data_session.commit()
         project.close()
         self.open_project(path)
 
@@ -133,6 +141,20 @@ class Controller(QtCore.QObject):
         self.project.project_time_changed.disconnect(
             self._on_project_time_change)
         self.project = None
+        self._close_data()
+
+    def _load_data(self, url):
+        self.data_engine = create_engine(url, echo=False)
+        self.data_model = OrmBase
+        self.data_model.metadata.create_all(self.data_engine, checkfirst=True)
+        session = sessionmaker(bind=self.data_engine, expire_on_commit=False)
+        self.data_session = session()
+
+    def _close_data(self):
+        self.data_session.close()
+        self.data_session = None
+        self.data_engine = None
+        self.data_model = None
 
     # Running
 
@@ -185,7 +207,7 @@ class Controller(QtCore.QObject):
         """
         self._logger.info(
             'Deleting any forecasting results from previous runs')
-        self.project.forecast_set.clear()
+        self.project.forecast_set.clear(self.data_session)
         inf_speed = self._settings.value('lab_mode/infinite_speed')
         if inf_speed:
             self._logger.info('Simulating at maximum speed')
@@ -212,8 +234,8 @@ class Controller(QtCore.QObject):
 
         """
         self.simulator.stop()
-        self.project.seismic_catalog.clear_events()
-        self.project.injection_history.clear_events()
+        self.project.seismic_catalog.clear_events(self.data_session)
+        self.project.injection_history.clear_events(self.data_session)
         self._logger.info('Stopping simulation')
 
     # Simulation handling
@@ -297,7 +319,8 @@ class Controller(QtCore.QObject):
 
     def _on_fdsnws_runner_finished(self, results):
         if results is not None:
-            self.project.seismic_catalog.import_events(**results)
+            self.project.seismic_catalog.import_events(self.data_session,
+                                                       **results)
 
     # HYDWS task function
 
@@ -307,13 +330,15 @@ class Controller(QtCore.QObject):
 
     def _on_hydws_runner_finished(self, results):
         if results is not None:
-            self.project.injection_history.import_events(**results)
+            self.project.injection_history.import_events(self.data_session,
+                                                         **results)
 
     # Rate computation task function
 
     def _update_rates(self, info):
         t_run = info.t_project
-        seismic_events = self.project.seismic_catalog.events_before(t_run)
+        seismic_events = self.project.seismic_catalog.events_before(
+            self.data_session, t_run)
         data = [(e.date_time, e.magnitude) for e in seismic_events]
         if len(data) == 0:
             return
