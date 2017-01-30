@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.inspection import inspect
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
-from core.data.geometry import Point
+from geometry import Point
 
 _catalogs_events_table = Table('catalogs_events', OrmBase.metadata,
                                Column('seismic_catalogs_id', Integer,
