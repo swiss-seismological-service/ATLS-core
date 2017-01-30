@@ -62,7 +62,7 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         self._logger = logging.getLogger(__name__)
         self.entity = SeismicEvent
 
-    def import_events(self, session, importer, timerange=None):
+    def import_events(self, importer, timerange=None):
         """
         Imports seismic events from a csv file by using an EventImporter
 
@@ -80,6 +80,9 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         :type timerange: DateTime tuple
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         events = []
         try:
             for date, fields in importer:
@@ -105,15 +108,18 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
                 len(events)))
             self.history_changed.emit()
 
-    def events_before(self, session, end_date, mc=0):
+    def events_before(self, end_date, mc=0):
         """ Returns all events >mc before and including *end_date* """
+        session = inspect(self).session
+        if not session:
+            return
         predicate = and_(SeismicEvent.date_time <= end_date,
                          SeismicEvent.magnitude > mc)
         events = self._get_events(session, predicate=predicate,
                                   order="date_time")
         return events
 
-    def latest_event(self, session, time=None):
+    def latest_event(self, time=None):
         """
         Returns the latest event before time *time*
 
@@ -124,6 +130,9 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         :type time: datetime
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         predicate = None
         if time:
             predicate = SeismicEvent.date_time < time
@@ -131,11 +140,14 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
                                   order="date_time")
         return events[-1] if len(events) > 0 else None
 
-    def clear_events(self, session):
+    def clear_events(self):
         """
         Clear all seismic events from the database
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         self._purge_events(session)
         self._logger.info('Cleared all seismic events.')
         self.history_changed.emit()
@@ -152,7 +164,10 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
             setattr(copy, *item)
         return copy
 
-    def _purge_events(self, session, predicate=None):
+    def _purge_events(self, predicate=None):
+        session = inspect(self).session
+        if not session:
+            return
         query = session.query(self.entity)
         if predicate is not None:
             query = query.filter(*predicate)
@@ -160,7 +175,10 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
             session.delete(obj)
         session.commit()
 
-    def _add_events(self, session, events):
+    def _add_events(self, events):
+        session = inspect(self).session
+        if not session:
+            return
         for i, o in enumerate(events):
             session.add(o)
             if i % 1000 == 0:
@@ -168,7 +186,10 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         print('committing')
         session.commit()
 
-    def _get_events(self, session, predicate=None, order=None):
+    def _get_events(self, predicate=None, order=None):
+        session = inspect(self).session
+        if not session:
+            return
         query = session.query(SeismicEvent)
         if predicate is not None:
             query = query.filter(predicate)
@@ -180,6 +201,8 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
 
     def __getitem__(self, item):
         session = inspect(self).session
+        if not session:
+            return
         query = session.query(SeismicEvent)
         events = query.all()
         if len(events) == 0:
@@ -189,6 +212,8 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
 
     def __len__(self):
         session = inspect(self).session
+        if not session:
+            return
         query = session.query(SeismicEvent)
         events = query.all()
         return len(events)

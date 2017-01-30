@@ -42,7 +42,7 @@ class InjectionHistory(QtCore.QObject, OrmBase):
         self._logger = logging.getLogger(__name__)
         self.entity = InjectionSample
 
-    def import_events(self, session, importer, timerange=None):
+    def import_events(self, importer, timerange=None):
         """
         Imports hydraulic events from a csv file by using an EventReporter
 
@@ -58,6 +58,9 @@ class InjectionHistory(QtCore.QObject, OrmBase):
         :type importer: EventImporter
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         events = []
         try:
             for date, fields in importer:
@@ -87,11 +90,14 @@ class InjectionHistory(QtCore.QObject, OrmBase):
                 len(events)))
             self.history_changed.emit()
 
-    def clear_events(self, session):
+    def clear_events(self):
         """
         Clear all hydraulic events from the database
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         self._purge_events(session)
         self._logger.info('Cleared all hydraulic events.')
         self.history_changed.emit()
@@ -108,7 +114,10 @@ class InjectionHistory(QtCore.QObject, OrmBase):
             setattr(copy, *item)
         return copy
 
-    def _purge_events(self, session, predicate=None):
+    def _purge_events(self, predicate=None):
+        session = inspect(self).session
+        if not session:
+            return
         query = session.query(self.entity)
         if predicate is not None:
             query = query.filter(*predicate)
@@ -116,7 +125,10 @@ class InjectionHistory(QtCore.QObject, OrmBase):
             session.delete(obj)
         session.commit()
 
-    def _add_events(self, session, events):
+    def _add_events(self, events):
+        session = inspect(self).session
+        if not session:
+            return
         for i, o in enumerate(events):
             session.add(o)
             if i % 1000 == 0:
@@ -126,6 +138,8 @@ class InjectionHistory(QtCore.QObject, OrmBase):
 
     def __getitem__(self, item):
         session = inspect(self).session
+        if not session:
+            return
         query = session.query(InjectionSample)
         events = query.all()
         if len(events) == 0:
@@ -135,6 +149,8 @@ class InjectionHistory(QtCore.QObject, OrmBase):
 
     def __len__(self):
         session = inspect(self).session
+        if not session:
+            return
         query = session.query(InjectionSample)
         events = query.all()
         return len(events)

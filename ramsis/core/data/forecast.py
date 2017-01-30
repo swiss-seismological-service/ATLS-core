@@ -52,21 +52,27 @@ class ForecastSet(QtCore.QObject, OrmBase):
     def __init__(self):
         QtCore.QObject.__init__(self)
 
-    def clear(self, session):
+    def clear(self):
         """
         Delete all data from the db
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         self._purge_events(session)
         self._emit_change_signal()
 
-    def add(self, session, ev):
+    def add(self, ev):
         """
         Add one or more events to the history
 
         :param ev: event or list of events
 
         """
+        session = inspect(self).session
+        if not session:
+            return
         try:
             ev_list = [e for e in ev]
         except TypeError:
@@ -74,7 +80,10 @@ class ForecastSet(QtCore.QObject, OrmBase):
         self._add_events(session, ev_list)
         self._emit_change_signal()
 
-    def _purge_events(self, session, predicate=None):
+    def _purge_events(self, predicate=None):
+        session = inspect(self).session
+        if not session:
+            return
         query = session.query(Forecast)
         if predicate is not None:
             query = query.filter(*predicate)
@@ -82,7 +91,10 @@ class ForecastSet(QtCore.QObject, OrmBase):
             session.delete(obj)
         session.commit()
 
-    def _add_events(self, session, events):
+    def _add_events(self, events):
+        session = inspect(self).session
+        if not session:
+            return
         for i, o in enumerate(events):
             session.add(o)
             if i % 1000 == 0:
@@ -185,8 +197,9 @@ class ForecastResult(QtCore.QObject, OrmBase):
 
         """
         session = inspect(self).session
-        if session:
-            session.commit()
+        if not session:
+            return
+        session.commit()
         self.result_changed.emit(self)
 
 
