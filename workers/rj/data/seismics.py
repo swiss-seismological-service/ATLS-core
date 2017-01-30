@@ -8,9 +8,10 @@ import logging
 import traceback
 
 from PyQt4 import QtCore
-from sqlalchemy import Column, Table
+from sqlalchemy import Column, Table, and_
 from sqlalchemy import Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.inspection import inspect
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
 from core.data.geometry import Point
@@ -53,9 +54,13 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
                               back_populates='reference_catalog')
     # endregion
 
+    # signals
+    history_changed = QtCore.pyqtSignal()
+
     def __init__(self):
         QtCore.QObject.__init__(self)
         self._logger = logging.getLogger(__name__)
+        self.entity = SeismicEvent
 
     def import_events(self, session, importer, timerange=None):
         """
@@ -92,18 +97,18 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         else:
             predicate = None
             if timerange:
-                predicate = (self.entity.date_time >= timerange[0],
-                             self.entity.date_time <= timerange[1])
+                predicate = and_(self.entity.date_time >= timerange[0],
+                                 self.entity.date_time <= timerange[1])
             self._purge_events(session, predicate)
             self._add_events(session, events)
             self._logger.info('Imported {} seismic events.'.format(
                 len(events)))
-            self._emit_change_signal({})
+            self.history_changed.emit()
 
     def events_before(self, session, end_date, mc=0):
         """ Returns all events >mc before and including *end_date* """
-        predicate = (SeismicEvent.date_time <= end_date,
-                     SeismicEvent.magnitude > mc)
+        predicate = and_(SeismicEvent.date_time <= end_date,
+                         SeismicEvent.magnitude > mc)
         events = self._get_events(session, predicate=predicate,
                                   order="date_time")
         return events
@@ -133,7 +138,7 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
         """
         self._purge_events(session)
         self._logger.info('Cleared all seismic events.')
-        self._emit_change_signal({})
+        self.history_changed.emit()
 
     def copy(self):
         """ Returns a new copy of itself """
@@ -172,6 +177,21 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
             query = query.order_by(order)
         results = query.all()
         return results
+
+    def __getitem__(self, item):
+        session = inspect(self).session
+        query = session.query(SeismicEvent)
+        events = query.all()
+        if len(events) == 0:
+            return None
+        else:
+            return events[item]
+
+    def __len__(self):
+        session = inspect(self).session
+        query = session.query(SeismicEvent)
+        events = query.all()
+        return len(events)
 
 
 class SeismicEvent(OrmBase):

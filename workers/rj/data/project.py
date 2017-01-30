@@ -61,13 +61,14 @@ class Project(QtCore.QObject, OrmBase):
         self.forecast_set = ForecastSet()
         self.seismic_catalog = SeismicCatalog()
         self._project_time = None
-        self.init_on_load()
 
-    @reconstructor
-    def init_on_load(self):
         # Set the project time to the time of the first event
         event = self.earliest_event()
         self._project_time = event.date_time if event else datetime.now()
+
+    @reconstructor
+    def init_on_load(self):
+        self.__init__()
 
     def close(self):
         """

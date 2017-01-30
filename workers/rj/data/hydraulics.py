@@ -8,8 +8,9 @@ import logging
 import traceback
 
 from PyQt4 import QtCore
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, and_
 from sqlalchemy.orm import relationship
+from sqlalchemy.inspection import inspect
 from ormbase import OrmBase, DeclarativeQObjectMeta
 
 
@@ -33,9 +34,13 @@ class InjectionHistory(QtCore.QObject, OrmBase):
                            cascade='all')
     # endregion
 
+    # signals
+    history_changed = QtCore.pyqtSignal()
+
     def __init__(self):
         QtCore.QObject.__init__(self)
         self._logger = logging.getLogger(__name__)
+        self.entity = InjectionSample
 
     def import_events(self, session, importer, timerange=None):
         """
@@ -74,13 +79,13 @@ class InjectionHistory(QtCore.QObject, OrmBase):
         else:
             predicate = None
             if timerange:
-                predicate = (self.entity.date_time >= timerange[0],
-                             self.entity.date_time <= timerange[1])
+                predicate = and_(self.entity.date_time >= timerange[0],
+                                 self.entity.date_time <= timerange[1])
             self._purge_events(session, predicate)
             self._add_events(session, events)
             self._logger.info('Imported {} hydraulic events.'.format(
                 len(events)))
-            self._emit_change_signal({})
+            self.history_changed.emit()
 
     def clear_events(self, session):
         """
@@ -89,7 +94,7 @@ class InjectionHistory(QtCore.QObject, OrmBase):
         """
         self._purge_events(session)
         self._logger.info('Cleared all hydraulic events.')
-        self._emit_change_signal({})
+        self.history_changed.emit()
 
     def copy(self):
         """ Returns a new copy of itself """
@@ -120,11 +125,19 @@ class InjectionHistory(QtCore.QObject, OrmBase):
         session.commit()
 
     def __getitem__(self, item):
-        events = self.store.read_all(InjectionSample)
+        session = inspect(self).session
+        query = session.query(InjectionSample)
+        events = query.all()
         if len(events) == 0:
             return None
         else:
             return events[item]
+
+    def __len__(self):
+        session = inspect(self).session
+        query = session.query(InjectionSample)
+        events = query.all()
+        return len(events)
 
 
 class InjectionPlan(OrmBase):
