@@ -40,7 +40,7 @@ class InjectionHistory(QtCore.QObject, OrmBase):
     def init_on_load(self):
         QtCore.QObject.__init__(self)
 
-    def import_events(self, importer):
+    def import_events(self, importer, timerange=None):
         """
         Imports hydraulic events from a csv file by using an EventReporter
 
@@ -76,7 +76,13 @@ class InjectionHistory(QtCore.QObject, OrmBase):
                       'field has the format dd.mm.yyyyTHH:MM:SS. The '
                       'original error was ' + traceback.format_exc())
         else:
-            self.samples.append(events)
+            if timerange:
+                starttime, endtime = timerange
+                self.samples = [s for s in self.samples if
+                                s.date_time < starttime or
+                                s.date_time > endtime]
+            for e in events:
+                self.samples.append(e)
             log.info('Imported {} hydraulic events.'.format(
                 len(events)))
             self.history_changed.emit()

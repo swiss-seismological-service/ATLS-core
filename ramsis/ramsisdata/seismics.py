@@ -60,7 +60,7 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
     def init_on_load(self):
         QtCore.QObject.__init__(self)
 
-    def import_events(self, importer):
+    def import_events(self, importer, timerange=None):
         """
         Imports seismic events from a csv file by using an EventImporter
 
@@ -93,7 +93,13 @@ class SeismicCatalog(QtCore.QObject, OrmBase):
                       'dd.mm.yyyyTHH:MM:SS. The original error was ' +
                       traceback.format_exc())
         else:
-            self.seismic_events.append(events)
+            if timerange:
+                starttime, endtime = timerange
+                self.seismic_events = [s for s in self.seismic_events if
+                                       s.date_time < starttime or
+                                       s.date_time > endtime]
+            for e in events:
+                self.seismic_events.append(e)
             log.info('Imported {} seismic events.'.format(len(events)))
             self.history_changed.emit()
 
