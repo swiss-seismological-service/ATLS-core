@@ -14,7 +14,7 @@ import os
 
 from PyQt4 import QtCore
 
-from ramsisdata.store import load_db
+from ramsisdata.session import load_db
 from ramsisdata.project import Project
 from ramsisdata.forecast import Forecast, ForecastInput, Scenario
 from ramsisdata.hydraulics import InjectionPlan, InjectionSample
