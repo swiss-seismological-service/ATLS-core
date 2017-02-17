@@ -57,9 +57,10 @@ class Project(QtCore.QObject, OrmBase):
     will_close = QtCore.pyqtSignal(object)
     project_time_changed = QtCore.pyqtSignal(datetime)
 
-    def __init__(self, store=None, title=''):
+    def __init__(self, engine=None, session=None, title=''):
         super(Project, self).__init__()
-        self.store = store
+        self.engine = engine
+        self.session = session
         self.seismic_catalog = SeismicCatalog()
         self.injection_history = InjectionHistory()
         self.rate_history = SeismicRateHistory()
@@ -76,8 +77,8 @@ class Project(QtCore.QObject, OrmBase):
         self.injection_well = InjectionWell(4740.3, 270645.0, 611631.0)
 
         self._project_time = datetime.now()
-        if self.store:
-            self.store.session.add(self)
+        if self.session:
+            self.session.add(self)
 
     @reconstructor
     def init_on_load(self):
@@ -94,8 +95,8 @@ class Project(QtCore.QObject, OrmBase):
         self.will_close.emit(self)
 
     def save(self):
-        if self.store:
-            self.store.commit()
+        if self.session:
+            self.session.commit()
 
     @property
     def project_time(self):

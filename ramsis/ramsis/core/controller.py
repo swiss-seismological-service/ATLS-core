@@ -14,9 +14,8 @@ import os
 
 from PyQt4 import QtCore
 
-from ramsisdata.store import Store
+from ramsisdata.store import load_db
 from ramsisdata.project import Project
-from ramsisdata.ormbase import OrmBase
 from ramsisdata.forecast import Forecast, ForecastInput, Scenario
 from ramsisdata.hydraulics import InjectionPlan, InjectionSample
 from core.simulator import Simulator, SimulatorState
@@ -89,12 +88,13 @@ class Controller(QtCore.QObject):
             return
         # We add an additional / in front of the url. So now we have 3 slashes
         # in total, because host and db-name section are both empty for sqlite
-        store_path = 'sqlite:///' + path
+        db_path = 'sqlite:///' + path
         self._logger.info('Loading project at ' + path +
                           ' - This might take a while...')
-        store = Store(store_path, OrmBase)
-        self.project = store.session.query(Project).first()
-        self.project.store = store
+        engine, session = load_db(db_path)
+        self.project = session.query(Project).first()
+        self.project.engine = engine
+        self.project.session = session
         self.project.project_time_changed.connect(self._on_project_time_change)
         self.engine.observe_project(self.project)
         self.project_loaded.emit(self.project)
@@ -116,10 +116,10 @@ class Controller(QtCore.QObject):
             self.close_project()
         if os.path.exists(path):
             os.remove(path)
-        store_path = 'sqlite:///' + path
+        db_path = 'sqlite:///' + path
         self._logger.info('Creating project at ' + path)
-        store = Store(store_path, OrmBase)
-        project = Project(store=store, title='New Project')
+        engine, session = load_db(db_path)
+        project = Project(engine=engine, session=session, title='New Project')
         project.save()
 
     def close_project(self):
@@ -268,7 +268,7 @@ class Controller(QtCore.QObject):
         dt = self._settings.value('engine/fc_interval')
         t_run = task_run_info.t_project + timedelta(hours=dt)
         forecast = self._create_forecast(t_run)
-        self.project.store.commit()  # commit new forecast object
+        # todo: add forecast to project
 
         # task
         forecast_task = ScheduledTask(

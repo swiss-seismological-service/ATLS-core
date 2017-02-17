@@ -43,7 +43,7 @@ class Engine(QtCore.QObject):
 
     def fc_job_complete(self):
         self._forecast.result = [self._forecast_job.result]
-        self._project.store.commit()
+        self._project.save()
         self.busy = False
         self.forecast_complete.emit()
 
