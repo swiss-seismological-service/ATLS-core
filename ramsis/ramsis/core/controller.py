@@ -16,7 +16,7 @@ from PyQt4 import QtCore
 
 from ramsisdata.session import load_db
 from ramsisdata.project import Project
-from ramsisdata.forecast import Forecast, ForecastInput, Scenario
+from ramsisdata.forecast import Forecast, ForecastInput, Scenario, ForecastSet
 from ramsisdata.hydraulics import InjectionPlan, InjectionSample
 from core.simulator import Simulator, SimulatorState
 from core.engine.engine import Engine
@@ -268,7 +268,10 @@ class Controller(QtCore.QObject):
         dt = self._settings.value('engine/fc_interval')
         t_run = task_run_info.t_project + timedelta(hours=dt)
         forecast = self._create_forecast(t_run)
-        # todo: add forecast to project
+        if not self.project.forecast_set:
+            self.project.forecast_set = ForecastSet()
+        self.project.forecast_set.forecasts.append(forecast)
+        self.project.save()
 
         # task
         forecast_task = ScheduledTask(
