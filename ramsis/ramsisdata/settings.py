@@ -140,7 +140,7 @@ class ProjectSettings(Settings):
                 'parameters': {'a': -1.6, 'b': 1.58, 'p': 1.2, 'c': 0.05}
             },
             'etas': {
-                'enabled': True,
+                'enabled': False,
                 'url': 'http://localhost:5001',
                 'title': 'ETAS',
                 'parameters': {'alpha': 0.8, 'k': 8.66, 'p': 1.2, 'c': 0.01,

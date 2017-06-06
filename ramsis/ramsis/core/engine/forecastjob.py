@@ -184,6 +184,11 @@ class HazardStage(WorkUnit):
         model_results = self.scenario.forecast_result.model_results
         valid_results = {id: r for id, r in model_results.items()
                          if r.rate_prediction is not None}
+
+        # FIXME: we exclude rj until after it was reviewed scientifically
+        if 'rj' in valid_results:
+            del valid_results['rj']
+
         if len(valid_results) == 0:
             log.error('Cannot run hazard: no valid inputs.')
             job_status = JobStatus(self, finished=True, info=None)
