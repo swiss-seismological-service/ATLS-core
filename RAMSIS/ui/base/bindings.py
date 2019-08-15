@@ -18,16 +18,23 @@ from RAMSIS.ui.base.controlinterface import control_interface
 
 
 class Binding(abc.ABC):
-    """  The base class for specific bindings """
+    """  The base class for bindings """
 
-    def __init__(self, target, widget):
+    def __init__(self, target, widget, validate=None, post=None):
         """
 
         :param target: Target model object
         :param QWidget widget: Widget showing the value of the target
+        :param validate: Optional validation function accepting the value to
+            validate and returning either True or False.
+        :param post: Optional function to call after the target value has been
+            updated from the widget. This function should accept no parameters.
+
         """
         self.target = target
         self.widget = widget
+        self.validate = validate or (lambda x: True)
+        self.post = post
         signal = control_interface(widget).change_signal()
         signal.connect(self.on_widget_changed)
 
@@ -40,13 +47,23 @@ class Binding(abc.ABC):
     def target_value(self):
         pass
 
+    @target_value.setter
+    @abc.abstractmethod
+    def target_value(self, value):
+        pass
+
     def refresh_ui(self):
         """ Refresh the UI with the current value from the target """
         control_interface(self.widget).set_value(self.target_value)
 
-    @abc.abstractmethod
     def on_widget_changed(self):
-        pass
+        new_value = self.widget_value
+        if self.validate(new_value):
+            self.target_value = new_value
+            if self.post:
+                self.post()
+        else:
+            self.refresh_ui()
 
 
 class AttrBinding(Binding):
@@ -64,8 +81,9 @@ class AttrBinding(Binding):
     def target_value(self):
         return rgetattr(self.target, self.attr)
 
-    def on_widget_changed(self):
-        rsetattr(self.target, self.attr, self.widget_value)
+    @target_value.setter
+    def target_value(self, value):
+        rsetattr(self.target, self.attr, value)
 
 
 class DictBinding(Binding):
@@ -83,8 +101,9 @@ class DictBinding(Binding):
     def target_value(self):
         return self.target[self.key]
 
-    def on_widget_changed(self):
-        self.target[self.key] = self.widget_value
+    @target_value.setter
+    def target_value(self, value):
+        self.target[self.key] = value
 
 
 class CallableBinding(Binding):
@@ -104,5 +123,6 @@ class CallableBinding(Binding):
     def target_value(self):
         return self.getter(self.target)
 
-    def on_widget_changed(self):
-        self.setter(self.target, self.widget_value)
+    @target_value.setter
+    def target_value(self, value):
+        self.setter(self.target, value)
