@@ -57,7 +57,8 @@ class WktPointBinding(AttrBinding):
         coords = wkt_utils.coordinates_from_wkb(data)
         return str(coords[self.dimension]) if coords else None
 
-    def on_widget_changed(self):
+    @target_value.setter
+    def target_value(self, value):
         data = super().target_value
         coords = list(wkt_utils.coordinates_from_wkb(data)) or [0, 0, 0]
         coords[self.dimension] = float(self.widget_value)
