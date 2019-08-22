@@ -402,8 +402,12 @@ class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
                     'reservoir': {'geom': reservoir},
                     'model_parameters': {}}}}
 
-        self.assertEqual(reference_result,
-                         json.loads(serializer.dumps(payload)))
+        ref_sorted = sort_ordered_dict(to_ordered_dict(reference_result))
+        ser_sorted = sort_ordered_dict(json.loads(serializer.dumps(payload)))
+        zipped_dict = zip(ref_sorted, ser_sorted)
+
+        for ref, ser in zipped_dict:
+            self.assertEqual(ref, ser)
 
 
 class SFMWorkerOMessageDeserializerTestCase(unittest.TestCase):
