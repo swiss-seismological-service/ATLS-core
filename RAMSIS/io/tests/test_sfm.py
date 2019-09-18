@@ -9,7 +9,7 @@ import json
 import os
 import unittest
 import uuid
-from collections import OrderedDict
+
 import dateutil
 
 from ramsis.datamodel.status import Status  # noqa
@@ -28,21 +28,6 @@ from RAMSIS.io.sfm import (SFMWorkerIMessageSerializer,
                            SFMWorkerOMessageDeserializer)
 from RAMSIS.io.utils import (pymap3d_transform_ned2geodetic,
                              pymap3d_transform_geodetic2ned)
-
-
-def to_ordered_dict(input_ordered_dict):
-    return json.loads(json.dumps(input_ordered_dict),
-                      object_pairs_hook=OrderedDict)
-
-
-def sort_ordered_dict(od):
-    res = OrderedDict()
-    for k, v in sorted(od.items()):
-        if isinstance(v, dict):
-            res[k] = sort_ordered_dict(v)
-        else:
-            res[k] = v
-    return res
 
 
 def _read(path):
@@ -252,12 +237,8 @@ class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
                     'reservoir': {'geom': reservoir},
                     'model_parameters': {}}}}
 
-        ref_sorted = sort_ordered_dict(to_ordered_dict(reference_result))
-        ser_sorted = sort_ordered_dict(json.loads(serializer.dumps(payload)))
-        zipped_dict = zip(ref_sorted, ser_sorted)
-
-        for ref, ser in zipped_dict:
-            self.assertEqual(ref, ser)
+        self.assertEqual(sorted(reference_result),
+                         sorted(json.loads(serializer.dumps(payload))))
 
     def test_no_proj(self):
 
@@ -402,12 +383,8 @@ class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
                     'reservoir': {'geom': reservoir},
                     'model_parameters': {}}}}
 
-        ref_sorted = sort_ordered_dict(to_ordered_dict(reference_result))
-        ser_sorted = sort_ordered_dict(json.loads(serializer.dumps(payload)))
-        zipped_dict = zip(ref_sorted, ser_sorted)
-
-        for ref, ser in zipped_dict:
-            self.assertEqual(ref, ser)
+        self.assertEqual(reference_result,
+                         json.loads(serializer.dumps(payload)))
 
 
 class SFMWorkerOMessageDeserializerTestCase(unittest.TestCase):
