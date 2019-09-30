@@ -9,7 +9,7 @@ Copyright (C) 2017, ETH Zurich - Swiss Seismological Service SED
 
 import logging
 from datetime import timedelta
-from .tools.scheduler import Task, TaskScheduler, PeriodicTask
+from .tools.scheduler import TaskScheduler, PeriodicTask
 
 
 class TaskManager:
@@ -143,12 +143,12 @@ class TaskManager:
         # self._logger.debug('New rate computed: ' + str(rates[0].rate))
         pass
 
-    def run_forecast(self, t):
+    def run_forecast(self, t, **kwargs):
         self.logger.info('Forecast initiated at {}'.format(t))
         self.core.engine.run(t, self.forecast_task.next_forecast)
 
 
-class ForecastTask(Task):
+class ForecastTask(PeriodicTask):
     """
     Schedules and runs the next forecast
 
@@ -160,6 +160,9 @@ class ForecastTask(Task):
         self.run_time = None
         self.one_off = False
         self.core = core
+        self._last_run = None
+        self.t0 = None
+        self.dt = None
 
     def schedule(self, t):
         """
@@ -169,7 +172,6 @@ class ForecastTask(Task):
         completed yet and whose forecast_time is after t.
 
         """
-
         if self.core.project is None:
             return
 
