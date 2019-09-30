@@ -94,13 +94,13 @@ def default_scenario(store, name='Scenario', **kwargs):
             enabled = seismicity_stage_config.get('enabled', True)
             if enabled:
                 runs = [SeismicityModelRun(model=m, enabled=True,
+                                           config=m.config,
                                            status=Status())
                         for m in store.load_models(
                             model_type=EModel.SEISMICITY)
                         if m.enabled]
                 s = seismicity_stage(runs=runs, **seismicity_stage_config)
                 retval.append(s)
-
         try:
             seismicity_skill_stage_config = stage_config[1]['seismicity_skill']
         except (IndexError, KeyError):
