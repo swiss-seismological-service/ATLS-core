@@ -160,9 +160,6 @@ class ForecastTask(PeriodicTask):
         self.run_time = None
         self.one_off = False
         self.core = core
-        self._last_run = None
-        self.t0 = None
-        self.dt = None
 
     def schedule(self, t):
         """
