@@ -23,11 +23,13 @@ from ramsis.datamodel.well import InjectionWell, WellSection  # noqa
 
 from RAMSIS.core.builder import (
     default_project, default_forecast, default_scenario)
-from RAMSIS.cores.store import Store
+from RAMSIS.core.store import Store
 from RAMSIS.io.hydraulics import HYDWSBoreholeHydraulicsDeserializer
 from RAMSIS.io.seismics import QuakeMLCatalogDeserializer
 
 PATH_SEISMICS = 'seismics.qml'
+# Only ~this many files can be imported and merged before
+# memory error occurs.
 PATHS_HYDRAULICS = [
     'hyd/basel-2006-00.json',
     'hyd/basel-2006-01.json',
@@ -51,24 +53,24 @@ PATHS_HYDRAULICS = [
     'hyd/basel-2006-19.json',
     'hyd/basel-2006-20.json',
     'hyd/basel-2006-21.json',
-    'hyd/basel-2006-22.json',
-    'hyd/basel-2006-23.json',
-    'hyd/basel-2006-24.json',
-    'hyd/basel-2006-25.json',
-    'hyd/basel-2006-26.json',
-    'hyd/basel-2006-27.json',
-    'hyd/basel-2006-28.json',
-    'hyd/basel-2006-29.json',
-    'hyd/basel-2006-30.json',
-    'hyd/basel-2006-31.json',
-    'hyd/basel-2006-32.json',
-    'hyd/basel-2006-33.json',
-    'hyd/basel-2006-34.json',
-    'hyd/basel-2006-35.json',
-    'hyd/basel-2006-36.json',
-    'hyd/basel-2006-37.json',
-    'hyd/basel-2006-38.json',
-    'hyd/basel-2006-39.json', ]
+    'hyd/basel-2006-22.json']
+#    'hyd/basel-2006-23.json',
+#    'hyd/basel-2006-24.json',
+#    'hyd/basel-2006-25.json',
+#    'hyd/basel-2006-26.json',
+#    'hyd/basel-2006-27.json',
+#    'hyd/basel-2006-28.json',
+#    'hyd/basel-2006-29.json',
+#    'hyd/basel-2006-30.json',
+#    'hyd/basel-2006-31.json',
+#    'hyd/basel-2006-32.json',
+#    'hyd/basel-2006-33.json',
+#    'hyd/basel-2006-34.json',
+#    'hyd/basel-2006-35.json',
+#    'hyd/basel-2006-36.json',
+#    'hyd/basel-2006-37.json',
+#    'hyd/basel-2006-38.json',
+#    'hyd/basel-2006-39.json', ]
 
 PATH_INJECTION_PLAN = 'injectionplan-mignan.json'
 
@@ -206,7 +208,7 @@ if __name__ == '__main__':
     for fpath in PATHS_HYDRAULICS:
 
         with open(fpath, 'rb') as ifd:
-            tmp = deserializer.load(fpath)
+            tmp = deserializer.load(ifd)
 
         well.merge(tmp)
 
@@ -236,6 +238,9 @@ if __name__ == '__main__':
     with open(PATH_INJECTION_PLAN, 'rb') as ifd:
         scenario.well = deserializer.load(ifd)
 
+    store.add(project)
+    store.add(fc)
+    store.add(scenario)
     try:
         store.save()
     except Exception:
