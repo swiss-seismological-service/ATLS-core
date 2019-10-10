@@ -9,6 +9,7 @@ import json
 import os
 import unittest
 import uuid
+import re
 
 import dateutil
 
@@ -40,7 +41,38 @@ def _read(path):
     return retval.strip()
 
 
-class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
+class MessageSerializerTestCase(unittest.TestCase):
+
+    def assert_result_keys_equal(self, d1, d2):
+        self.assertEqual(d1.keys(), d2.keys())
+
+    def assert_dict_almost_equal(self, d1, d2):
+        if type(d1) != type(d2):
+            raise TypeError("Types being compared are not the same. "
+                            f"{d1}, {d2}, {type(d1)}, {type(d1)}")
+        if isinstance(d1, dict):
+            self.assert_result_keys_equal(d1, d2)
+            for key, val in d1.items():
+                self.assert_dict_almost_equal(val, d2[key])
+        elif isinstance(d1, list):
+            for i, item in enumerate(d1):
+                self.assert_dict_almost_equal(item, d2[i])
+        elif isinstance(d1, float):
+            self.assertAlmostEqual(d1, d2)
+        elif isinstance(d1, str) and d1[0:4] == 'POLY':
+            # Decompose geom string into just float values.
+            d1 = [float(s) for s in re.findall(r'-?\d+\.?\d*', d1)]
+            d2 = [float(s) for s in re.findall(r'-?\d+\.?\d*', d2)]
+            for i, item in enumerate(d1):
+                self.assert_dict_almost_equal(item, d2[i])
+        elif isinstance(d1, (bool, int, str)):
+            if isinstance(d1, str):
+                self.assertEqual(d1, d2)
+        else:
+            raise TypeError("Type is not handled by test")
+
+
+class SFMWorkerIMessageSerializerTestCase(MessageSerializerTestCase):
     """
     Test for :py:class:`RAMSIS.io.sfm.SFMWorkerIMessageSerializer` class.
     """
@@ -48,6 +80,7 @@ class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
                                   'resources')
 
     def test_dumps_imessage(self):
+
         reference_catalog = _read(os.path.join(self.PATH_RESOURCES,
                                                'cat-01.qml'))
         reference_catalog = base64.b64encode(
@@ -237,8 +270,8 @@ class SFMWorkerIMessageSerializerTestCase(unittest.TestCase):
                     'reservoir': {'geom': reservoir},
                     'model_parameters': {}}}}
 
-        self.assertEqual(reference_result,
-                         json.loads(serializer.dumps(payload)))
+        self.assert_dict_almost_equal(reference_result,
+                                      json.loads(serializer.dumps(payload)))
 
     def test_no_proj(self):
 

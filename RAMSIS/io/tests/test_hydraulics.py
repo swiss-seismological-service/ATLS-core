@@ -27,6 +27,7 @@ from RAMSIS.io.hydraulics import (HYDWSBoreholeHydraulicsDeserializer,
 from RAMSIS.io.utils import (binary_request, pymap3d_transform_geodetic2ned,
                              pymap3d_transform_ned2geodetic)
 
+from RAMSIS.io.tests.test_sfm import MessageSerializerTestCase
 
 class HYDWSBoreholeHydraulicsDeserializerTestCase(unittest.TestCase):
     """
@@ -226,7 +227,7 @@ class HYDWSBoreholeHydraulicsDeserializerTestCase(unittest.TestCase):
         self.assertEqual(bh_section.holediameter_value, 0.3)
 
 
-class HYDWSBoreholeHydraulicsSerializerTestCase(unittest.TestCase):
+class HYDWSBoreholeHydraulicsSerializerTestCase(MessageSerializerTestCase):
     """
     Test for the
     :py:class:`RAMSIS.io.hydraulics.HYDWSBoreholeHydraulicsSerializer` class.
@@ -267,7 +268,7 @@ class HYDWSBoreholeHydraulicsSerializerTestCase(unittest.TestCase):
             sections=[sec, ])
         serializer = HYDWSBoreholeHydraulicsSerializer(proj=None)
 
-        self.assertEqual(json.loads(serializer.dumps(bh)), reference_result)
+        self.assert_dict_almost_equal(reference_result, serializer.dumps(bh))
 
     def test_with_hydraulics(self):
         self.maxDiff = None
@@ -379,7 +380,7 @@ class HYDWSBoreholeHydraulicsSerializerTestCase(unittest.TestCase):
             proj=proj, plan=True,
             transform_callback=pymap3d_transform_ned2geodetic)
 
-        self.assertEqual(json.loads(serializer.dumps(bh)), reference_result)
+        self.assert_dict_almost_equal(reference_result, serializer.dumps(bh))
 
     def test_hydraulics_no_proj(self):
         reference_result = {
@@ -430,7 +431,7 @@ class HYDWSBoreholeHydraulicsSerializerTestCase(unittest.TestCase):
 
         serializer = HYDWSBoreholeHydraulicsSerializer(proj=None)
 
-        self.assertEqual(json.loads(serializer.dumps(bh)), reference_result)
+        self.assert_dict_almost_equal(reference_result, serializer.dumps(bh))
 
     def test_injectionplan_no_proj(self):
         reference_result = {
@@ -481,7 +482,7 @@ class HYDWSBoreholeHydraulicsSerializerTestCase(unittest.TestCase):
 
         serializer = HYDWSBoreholeHydraulicsSerializer(proj=None, plan=True)
 
-        self.assertEqual(json.loads(serializer.dumps(bh)), reference_result)
+        self.assert_dict_almost_equal(reference_result, serializer.dumps(bh))
 
 
 def suite():
