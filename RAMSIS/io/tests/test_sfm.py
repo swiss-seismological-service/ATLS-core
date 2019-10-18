@@ -571,12 +571,47 @@ class SFMWorkerOMessageDeserializerTestCase(unittest.TestCase):
                          reference_result)
 
 
+class SFMWorkerSubGeomDeserializerTestCase(unittest.TestCase):
+    """
+    Test for :py:class:`RAMSIS.io.sfm.SFMWorkerOMessageDeserializer` class.
+    """
+
+    PATH_RESOURCES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'resources')
+
+    def test_sub_geom(self):
+        json_omsg = _read(os.path.join(self.PATH_RESOURCES,
+                                       'omsg-200-subgeom.json'))
+        subgeom1 = ('POLYHEDRALSURFACE Z '
+                    '(((-2000 -2000 0,-2000 -1000 0,-1000 -1000 0,'
+                    '-1000 -2000 0,-2000 -2000 0)),((-2000 -2000 0,'
+                    '-2000 -1000 0,-2000 -1000 -4000,-2000 -2000 -4000,'
+                    '-2000 -2000 0)),((-2000 -2000 0,-1000 -2000 0,'
+                    '-1000 -2000 -4000,-2000 -2000 -4000,-2000 -2000 0)),'
+                    '((-1000 -1000 -4000,-1000 -2000 -4000,'
+                    '-2000 -2000 -4000,-2000 -1000 -4000,-1000 -1000 -4000)),'
+                    '((-1000 -1000 -4000,-1000 -2000 -4000,-1000 -2000 0,'
+                    '-1000 -1000 0,-1000 -1000 -4000)),((-1000 -1000 -4000,'
+                    '-1000 -1000 0,-2000 -1000 0,-2000 -1000 -4000,'
+                    '-1000 -1000 -4000)))')
+
+        deserializer = SFMWorkerOMessageDeserializer(proj=None)
+        deserialized_data = deserializer.loads(json_omsg)
+        self.assertEqual((deserialized_data["data"]["attributes"]
+                          ["forecast"].sub_geometries[0].geom),
+                         subgeom1)
+        self.assertEqual((len(deserialized_data["data"]["attributes"]
+                          ["forecast"].sub_geometries)), 16)
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(
         unittest.makeSuite(SFMWorkerIMessageSerializerTestCase, 'test'))
     suite.addTest(
         unittest.makeSuite(SFMWorkerOMessageDeserializerTestCase, 'test'))
+    suite.addTest(
+        unittest.makeSuite(SFMWorkerSubGeomDeserializerTestCase, 'test'))
     return suite
 
 

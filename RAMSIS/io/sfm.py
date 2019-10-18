@@ -158,8 +158,7 @@ class _ReservoirSchema(_SchemaBase):
     geom = fields.String()
     samples = fields.Nested(_ModelResultSampleSchema, many=True)
 
-    # XXX(damb): Currently no sub_geometries are supported.
-    # sub_geometries = fields.Nested('self', many=True)
+    sub_geometries = fields.Nested('self', many=True)
 
     @pre_dump
     def wkb_to_wkt(self, data, **kwargs):
