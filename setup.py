@@ -51,7 +51,7 @@ _extras_require = {'doc': [
     "sphinx-rtd-theme==0.1.9", ]}
 
 _tests_require = [
-    "sqlalchemy==0.8.4", ]
+    "sqlalchemy==1.3.0", ]
 
 _dependency_links = [(
     "git+https://gitlab.seismo.ethz.ch/indu/pyqtgraph.git"
