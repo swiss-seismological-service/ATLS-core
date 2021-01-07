@@ -34,7 +34,7 @@ _install_requires = [
     # AttributeError: module 'scipy.special' has no attribute 'loggamma'
     # while installing pymap3d
     "astropy==2.0.3",
-    "lxml==3.3.3",
+    "lxml==4.6.2",
     "matplotlib",
     # TODO (damb): check if valid version: "numpy==1.8.2",
     "numpy>=1.8.2",
